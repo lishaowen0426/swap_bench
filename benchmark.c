@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include <fcntl.h>
 #define die(msg, args...) \
    do {                         \
       fprintf(stderr,"(%s,%d) " msg "\n", __FUNCTION__ , __LINE__, ##args); \
@@ -50,14 +51,20 @@ int main(int argc, char** argv){
         die("allocate memory failed");        
     }
 
-    memset(buffer, 1, mem_size);
-    printf("prefault the buffer");
+    int fd = open("/dev/random", O_RDONLY);
+    printf("same filled pages before:");
+    if(system("echo pmem | sudo -S cat /sys/kernel/debug/zswap/same_filled_pages")){}
+    read(fd, buffer, mem_size);
+    printf("prefault the buffer\n");
     
     init_seed();
     char* page = malloc(PAGE_SIZE);
     size_t granularity = 64;
-    memset(page, 1, PAGE_SIZE);
-
+    read(fd, page, PAGE_SIZE);
+    printf("same filled pages after:");
+    if(system("echo pmem | sudo -S cat /sys/kernel/debug/zswap/same_filled_pages")){}
+    close(fd);
+    
     start_timer{
         for(size_t i = 0; i < NB_ACCESS; i++){ 
             uint64_t loc_rand = (lehmer64()/granularity*granularity) % (mem_size - granularity);
