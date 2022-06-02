@@ -23,7 +23,7 @@
 	   printf("(%s,%d) [%6lums] " msg "\n", __FUNCTION__ , __LINE__, elapsed/1000, ##args); \
 } while(0)
 
-#define MULTIPLIER 3
+#define MULTIPLIER 30
 #define NB_ACCESS 100000UL
 #define PAGE_SIZE 4096
 
@@ -42,6 +42,7 @@ static uint64_t lehmer64() {
 
 int main(int argc, char** argv){
     declare_timer;    
+    init_seed();
     size_t mem_size = MULTIPLIER * 1024UL * 1024UL * 1024UL;
     printf("Allocate %d GB memory\n", MULTIPLIER);
 
@@ -50,20 +51,10 @@ int main(int argc, char** argv){
     if(buffer == NULL){
         die("allocate memory failed");        
     }
-
-    int fd = open("/dev/random", O_RDONLY);
-    printf("same filled pages before:");
-    if(system("echo pmem | sudo -S cat /sys/kernel/debug/zswap/same_filled_pages")){}
-    read(fd, buffer, mem_size);
-    printf("prefault the buffer\n");
-    
-    init_seed();
+    memset(buffer, 1, mem_size); 
     char* page = malloc(PAGE_SIZE);
     size_t granularity = 64;
-    read(fd, page, PAGE_SIZE);
-    printf("same filled pages after:");
-    if(system("echo pmem | sudo -S cat /sys/kernel/debug/zswap/same_filled_pages")){}
-    close(fd);
+    memset(page, 1, PAGE_SIZE); 
     
     start_timer{
         for(size_t i = 0; i < NB_ACCESS; i++){ 
