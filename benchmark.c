@@ -83,7 +83,8 @@ void* func (void* arg){
     return NULL;
 } 
 int main(int argc, char** argv){
-    declare_timer;
+    //declare_timer;
+    
     init_seed();
     mem_size = MULTIPLIER * 1024UL * 1024UL * 1024UL;
     printf("Allocate %d GB memory\n", MULTIPLIER);
@@ -95,7 +96,7 @@ int main(int argc, char** argv){
     memset(buffer, 1, mem_size); 
     char* page = malloc(PAGE_SIZE);
     memset(page, 1, PAGE_SIZE); 
-    
+/*    
     for( granularity = 64; granularity <= 4096; granularity *= 2){
     
         start_timer{
@@ -105,6 +106,22 @@ int main(int argc, char** argv){
             }
         } stop_timer("%ld memcpy %lu memcpy/s %lu MB/s, granularity %lu",NB_ACCESS ,NB_ACCESS*1000000LU/elapsed, NB_ACCESS*granularity*1000000LU/elapsed/1024/1024, granularity);
     }
+*/
 
+    for(int num_threads = 2; num_threads <= 20; num_threads += 2){
+         for( granularity = 64; granularity <= 4096; granularity *= 2){
+             declare_timer;
+             start_timer{
+                     pthread_t threads[num_threads];
+                     for(int i = 0; i < num_threads; i++){
+                         pthread_create(&threads[i],NULL,func,(void*)i);
+                     }
+
+                     for(int i = 0; i < num_threads; i++){
+                         pthread_join(threads[i],NULL);
+                     }
+            }stop_timer("%d threads doing %ld memcpy of %ld bytes (%f MB/s)", num_threads, num_threads*NB_ACCESS, granularity, bandwith(num_threads*NB_ACCESS*granularity, elapsed));
+         }
+     }
 
 }
